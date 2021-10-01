@@ -42,15 +42,16 @@ If ($Pools) {
   $AgentsUrl = "https://dev.azure.com/$($OrganizationName)/_apis/distributedtask/pools/$($PoolId)/agents?api-version=$($ApiVersion)"
   $Agents = (Invoke-RestMethod -Uri $AgentsUrl -Method 'Get' -Headers @{Authorization = "Basic $EncodedPAT"}).value
   if ($Agents) {
-    $AgentNames = ($Agents | Where-Object { $_.status -eq 'Offline'}).Name
-    $OfflineAgents = ($Agents | Where-Object { $_.status -eq 'Offline'}).id
+    $OfflineAgents = ($Agents | Where-Object { $_.status -eq 'Offline'})
     foreach ($OfflineAgent in $OfflineAgents) {
-      foreach ($AgentName in $AgentNames) {
-        Write-Output "Removing: $($AgentName) From Pool: $($AgentPoolName) in Organization: $($OrganizationName)"
-        $OfflineAgentsUrl = "https://dev.azure.com/$($OrganizationName)/_apis/distributedtask/pools/$($PoolId)/agents/$($OfflineAgent)?api-version=$($ApiVersion)"
-        Invoke-RestMethod -Uri $OfflineAgentsUrl -Method 'Delete' -Headers @{Authorization = "Basic $EncodedPAT"}
-      }
-    }
+      $AgentName = $OfflineAgent.Name
+      Write-Output "Removing: $($AgentName) From Pool: $($AgentPoolName) in Organization: $($OrganizationName)"
+      $OfflineAgentsUrl = "https://dev.azure.com/$($OrganizationName)/_apis/distributedtask/pools/$($PoolId)/agents/$($OfflineAgent.id)?api-version=$($ApiVersion)"
+      Write-Output "DELETE: $($OfflineAgentsUrl)"
+      Invoke-RestMethod -Uri $OfflineAgentsUrl -Method 'Delete' -Headers @{Authorization = "Basic $EncodedPAT"}
+
+      # slow down the request rate to avoid throttling from Azure
+      Start-Sleep -Milliseconds 50
   } else {
     Write-Output "No Agents found in $($AgentPoolName) for Organization $($OrganizationName)"
   }
